@@ -4024,11 +4024,15 @@ fu_engine_install_blob(FuEngine *self,
 		       FwupdFeatureFlags feature_flags,
 		       GError **error)
 {
+	gboolean prepare_ret;
+	gboolean update_stream_seekable = FALSE;
 	gboolean write_complete = FALSE;
+	goffset update_stream_offset = 0;
 	g_autofree gchar *device_id = NULL;
 	g_autofree gchar *id_display = fu_device_get_id_display(device);
 	g_autoptr(GTimer) timer = g_timer_new();
 	g_autoptr(FuDeviceProgress) device_progress = fu_device_progress_new(device, progress);
+	GInputStream *update_stream = fu_release_get_stream(release);
 
 	g_return_val_if_fail(device_progress != NULL, FALSE);
 
@@ -4045,7 +4049,26 @@ fu_engine_install_blob(FuEngine *self,
 	/* signal to all the plugins the update is about to happen */
 	device_id = g_strdup(fu_device_get_id(device));
 	fu_engine_set_emulator_phase(self, FU_ENGINE_EMULATOR_PHASE_PREPARE);
-	if (!fu_engine_prepare(self, device_id, fu_progress_get_child(progress), flags, error))
+	if (G_IS_SEEKABLE(update_stream) && g_seekable_can_seek(G_SEEKABLE(update_stream))) {
+		update_stream_offset = g_seekable_tell(G_SEEKABLE(update_stream));
+		update_stream_seekable = update_stream_offset >= 0;
+	}
+	fu_device_set_update_stream(device, update_stream_seekable ? update_stream : NULL);
+	prepare_ret =
+	    fu_engine_prepare(self, device_id, fu_progress_get_child(progress), flags, error);
+	fu_device_set_update_stream(device, NULL);
+	if (update_stream_seekable && !g_seekable_seek(G_SEEKABLE(update_stream),
+						       update_stream_offset,
+						       G_SEEK_SET,
+						       NULL,
+						       prepare_ret ? error : NULL)) {
+		if (!prepare_ret)
+			g_warning("failed to restore update stream after prepare");
+		else
+			g_prefix_error_literal(error, "failed to restore update stream: ");
+		return FALSE;
+	}
+	if (!prepare_ret)
 		return FALSE;
 	fu_progress_step_done(progress);
 

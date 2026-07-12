@@ -99,7 +99,7 @@ static void
 fu_uefi_db_plugin_device_registered(FuPlugin *plugin, FuDevice *device)
 {
 	FuUefiDbPlugin *self = FU_UEFI_DB_PLUGIN(plugin);
-	if (g_strcmp0(fu_device_get_plugin(device), "uefi_kek") == 0) {
+	if (FU_IS_UEFI_DEVICE(device) && g_strcmp0(fu_device_get_plugin(device), "uefi_kek") == 0) {
 		GPtrArray *devices = fu_plugin_get_devices(plugin);
 		g_set_object(&self->device_kek, device);
 		for (guint i = 0; i < devices->len; i++) {

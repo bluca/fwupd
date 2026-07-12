@@ -101,6 +101,7 @@ typedef struct {
 	gulong notify_flags_proxy_id;
 	GHashTable *instance_hash; /* (nullable) */
 	FuProgress *progress;	   /* provided for FuDevice notify callbacks */
+	GInputStream *update_stream; /* provided while update prepare callbacks run */
 } FuDevicePrivate;
 
 typedef struct {
@@ -6419,6 +6420,23 @@ fu_device_set_progress(FuDevice *self, FuProgress *progress)
 	device_class->set_progress(self, progress);
 }
 
+GInputStream *
+fu_device_get_update_stream(FuDevice *self)
+{
+	FuDevicePrivate *priv = GET_PRIVATE(self);
+	g_return_val_if_fail(FU_IS_DEVICE(self), NULL);
+	return priv->update_stream;
+}
+
+void
+fu_device_set_update_stream(FuDevice *self, GInputStream *stream)
+{
+	FuDevicePrivate *priv = GET_PRIVATE(self);
+	g_return_if_fail(FU_IS_DEVICE(self));
+	g_return_if_fail(stream == NULL || G_IS_INPUT_STREAM(stream));
+	g_set_object(&priv->update_stream, stream);
+}
+
 /**
  * fu_device_convert_instance_ids:
  * @self: a #FuDevice
@@ -8409,6 +8427,7 @@ fu_device_dispose(GObject *object)
 	FuDevicePrivate *priv = GET_PRIVATE(self);
 	g_clear_object(&priv->ctx);
 	g_clear_object(&priv->target);
+	g_clear_object(&priv->update_stream);
 	G_OBJECT_CLASS(fu_device_parent_class)->dispose(object);
 }
 

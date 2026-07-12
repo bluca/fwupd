@@ -10,6 +10,7 @@
 
 #include "fu-backend.h"
 #include "fu-device.h"
+#include "fu-input-stream.h"
 
 #define fu_device_set_plugin(d, v) fwupd_device_set_plugin(FWUPD_DEVICE(d), v)
 
@@ -67,6 +68,10 @@ guint
 fu_device_get_request_cnt(FuDevice *self, FwupdRequestKind request_kind) G_GNUC_NON_NULL(1);
 void
 fu_device_set_progress(FuDevice *self, FuProgress *progress) G_GNUC_NON_NULL(1);
+FuInputStream *
+fu_device_get_update_stream(FuDevice *self) G_GNUC_NON_NULL(1);
+void
+fu_device_set_update_stream(FuDevice *self, FuInputStream *stream) G_GNUC_NON_NULL(1);
 gboolean
 fu_device_set_quirk_kv(FuDevice *self,
 		       const gchar *key,

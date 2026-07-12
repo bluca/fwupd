@@ -16,7 +16,7 @@ firmware update changes the firmware code and configuration measurements (PCRs
 SecureBoot measurements (PCR 7), which would otherwise invalidate the sealed
 policy and require the recovery key after the update has been applied.
 
-Before an update that affects the measured boot state is applied, this plugin
+Before an update for which no complete prediction is available, this plugin
 asks `systemd-pcrlock` to remove the `.pcrlock` files that pin the relevant
 current measurements and to regenerate the policy. If this fails the update is
 aborted, so that the firmware is never changed while the sealed policy still
@@ -24,6 +24,16 @@ requires the old measurements, which would otherwise leave the disk impossible
 to unlock unattended. Once the machine has rebooted and applied the update, the
 `systemd-pcrlock-*.service` units re-lock the policy against the new
 measurements automatically.
+
+For authenticated KEK, db, and dbx updates, the plugin retains the raw update
+data until the variable write finishes and then passes it to
+`systemd-pcrlock` using `Lock()` with the `secureBootKek`, `secureBootDb`, or
+`secureBootDbx` category and Base64-encoded `data`. The `filename` parameter is
+set to `fwupd.pcrlock`, which is appended as a suffix to each generated
+prediction variant. `systemd-pcrlock` reads the resulting efivarfs and TPM
+event-log state, creates any parallel PCR 7 policy and authority variants,
+applies a category-specific fallback when a measurement cannot be predicted,
+and reseals the policy before the call returns.
 
 The plugin is only active when `systemd-pcrlock` is being used to protect the
 system, which is detected by the presence of a generated policy in
@@ -40,8 +50,11 @@ This protocol does not create a device and thus requires no vendor ID set.
 ## External Interface Access
 
 This plugin requires access to the `systemd-pcrlock` Varlink service at
-`/run/systemd/io.systemd.PCRLock`, providing the `io.systemd.PCRLock.Lock`
-method (added in systemd v262).
+`/run/systemd/io.systemd.PCRLock`, providing the `io.systemd.PCRLock.Lock`,
+`ListComponents`, and `MakePolicy` methods. SecureBoot prediction support is
+detected from the `secureBootKek`, `secureBootDb`, and `secureBootDbx` values of
+`LockCategory`. Older services without these categories use the unlock and
+regenerate fallback.
 
 ## Version Considerations
 

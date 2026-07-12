@@ -57,7 +57,7 @@ static void
 fu_uefi_kek_plugin_device_registered(FuPlugin *plugin, FuDevice *device)
 {
 	FuUefiKekPlugin *self = FU_UEFI_KEK_PLUGIN(plugin);
-	if (g_strcmp0(fu_device_get_plugin(device), "uefi_pk") == 0) {
+	if (FU_IS_UEFI_DEVICE(device) && g_strcmp0(fu_device_get_plugin(device), "uefi_pk") == 0) {
 		GPtrArray *devices = fu_plugin_get_devices(plugin);
 		g_set_object(&self->device_pk, device);
 		for (guint i = 0; i < devices->len; i++) {
